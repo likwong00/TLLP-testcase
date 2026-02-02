@@ -1,0 +1,6 @@
+workspaces:
+    - "apps/*"
+    - "packages/*"
+packages:
+    - "packages/*"
+    - "apps/*"

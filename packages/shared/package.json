@@ -1,0 +1,17 @@
+{
+    "name": "@file-service/shared",
+    "version": "1.0.0",
+    "description": "Shared types and schemas",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "type-check": "tsc --noEmit"
+    },
+    "dependencies": {
+        "zod": "^3.25.76"
+    },
+    "devDependencies": {
+        "typescript": "^5.3.3"
+    }
+}

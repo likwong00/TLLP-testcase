@@ -1,0 +1,20 @@
+{
+    "name": "file-service",
+    "version": "1.0.0",
+    "description": "File upload and download service",
+    "private": true,
+    "scripts": {
+        "dev": "turbo run dev",
+        "build": "turbo run build",
+        "lint": "turbo run lint",
+        "type-check": "turbo run type-check"
+    },
+    "devDependencies": {
+        "typescript": "^5.3.3",
+        "turbo": "^1.10.16"
+    },
+    "workspaces": [
+        "apps/*",
+        "packages/*"
+    ]
+}
