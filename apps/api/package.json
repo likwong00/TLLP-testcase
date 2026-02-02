@@ -14,9 +14,13 @@
         "hono": "^4.0.0",
         "@hono/node-server": "^1.4.0",
         "@file-service/shared": "workspace:*",
+        "bcryptjs": "^2.4.3",
+        "mongodb-memory-server": "^10.0.0",
+        "mongoose": "^8.8.4",
         "zod": "^3.22.4"
     },
     "devDependencies": {
+        "@types/bcryptjs": "^2.4.6",
         "typescript": "^5.3.3",
         "tsx": "^4.7.0",
         "@types/node": "^20.10.0"

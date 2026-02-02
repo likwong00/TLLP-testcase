@@ -36,7 +36,7 @@ export default function Landing() {
                     transition={{ delay: 0.3 }}
                 >
                     <Button
-                        onClick={() => router.push("/requests/demo")}
+                        onClick={() => router.push("/requests")}
                         className="w-full h-auto py-6 flex-col gap-2"
                         variant="default"
                     >
