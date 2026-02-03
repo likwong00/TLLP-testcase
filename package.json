@@ -10,8 +10,8 @@
         "type-check": "turbo run type-check"
     },
     "devDependencies": {
-        "typescript": "^5.3.3",
-        "turbo": "^1.10.16"
+        "turbo": "^1.10.16",
+        "typescript": "^5.7.2"
     },
     "workspaces": [
         "apps/*",

@@ -2,7 +2,7 @@ import mongoose, { Schema } from "mongoose";
 
 export type AuthSessionDocument = {
     token: string;
-    scope: "request";
+    scope: "request" | "share";
     scopeId: string;
     expiresAt: Date;
     createdAt: Date;
@@ -12,7 +12,7 @@ export type AuthSessionDocument = {
 const AuthSessionSchema = new Schema<AuthSessionDocument>(
     {
         token: { type: String, required: true, index: true, unique: true },
-        scope: { type: String, required: true, enum: ["request"] },
+        scope: { type: String, required: true, enum: ["request", "share"] },
         scopeId: { type: String, required: true, index: true },
         expiresAt: { type: Date, required: true, index: true, expires: 0 },
     },

@@ -1,22 +1,5 @@
 "use client";
 
-// type FilePickerProps = {
-//     onFileSelected: (file: File | null) => void;
-// };
-
-// export default function FilePicker({ onFileSelected }: FilePickerProps) {
-//     const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-//         const file = event.currentTarget.files?.[0] ?? null;
-//         onFileSelected(file);
-//     };
-
-//     return (
-//         <div>
-//             <input type="file" onChange={handleChange} />
-//         </div>
-//     );
-// }
-
 import { useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Upload, File, X } from "lucide-react";
@@ -57,6 +40,10 @@ export default function FilePicker({ onFilesSelected }: FilePickerProps) {
     const handleUpload = () => {
         if (selectedFiles.length > 0) {
             onFilesSelected(selectedFiles);
+            setSelectedFiles([]);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
         }
     };
 

@@ -78,7 +78,7 @@ export default function UploadQueue({ items }: UploadQueueProps) {
                         className="p-4 border-b border-gray-100 last:border-b-0"
                     >
                         <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0 mt-0.5">
+                            <div className="shrink-0 mt-0.5">
                                 {getStatusIcon(item.status)}
                             </div>
                             <div className="flex-1 min-w-0">

@@ -2,6 +2,7 @@ import mongoose, { Schema } from "mongoose";
 
 export type FileRequestDocument = {
     passwordHash: string;
+    shareId?: string;
     createdAt: Date;
     updatedAt: Date;
 };
@@ -9,6 +10,7 @@ export type FileRequestDocument = {
 const FileRequestSchema = new Schema<FileRequestDocument>(
     {
         passwordHash: { type: String, required: true },
+        shareId: { type: String, required: false },
     },
     {
         timestamps: true,

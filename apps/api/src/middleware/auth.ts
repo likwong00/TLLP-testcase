@@ -6,7 +6,7 @@ import {
 
 export type AuthContext = {
     token: string;
-    scope: "request";
+    scope: "request" | "share";
     scopeId: string;
     expiresAt: Date;
 };
@@ -17,7 +17,7 @@ declare module "hono" {
     }
 }
 
-export const requireAuth = (scope: "request"): MiddlewareHandler => {
+export const requireAuth = (scope: "request" | "share"): MiddlewareHandler => {
     return async (context, next) => {
         const header = context.req.header("authorization") ?? "";
         const token = header.replace(/^Bearer\s+/i, "").trim();

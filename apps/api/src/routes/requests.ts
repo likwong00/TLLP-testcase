@@ -7,6 +7,7 @@ import {
 } from "../db/models/FileRequest";
 import { AuthSessionModel } from "../db/models/AuthSession";
 import { FileModel } from "../db/models/File";
+import { ShareModel } from "../db/models/Share";
 import { requireAuth } from "../middleware/auth";
 
 const TOKEN_TTL_MS = 1000 * 60 * 60; // 1 hour
@@ -131,6 +132,14 @@ router.post(
         file.uploadToken = undefined;
         await file.save();
 
+        const request =
+            await FileRequestModel.findById(id).lean<FileRequestDocument>();
+        if (request?.shareId) {
+            await ShareModel.findByIdAndUpdate(request.shareId, {
+                $addToSet: { fileIds: file._id },
+            });
+        }
+
         return context.json({ ok: true });
     },
 );
@@ -156,6 +165,43 @@ router.get("/:id/files", requireAuth("request"), async (context) => {
             status: file.status,
         })),
     });
+});
+
+router.post("/:id/create-share", requireAuth("request"), async (context) => {
+    const { id } = context.req.param();
+    const auth = context.get("auth");
+    if (auth.scopeId !== id) {
+        return context.json({ error: "Unauthorized" }, 401);
+    }
+
+    const request = await FileRequestModel.findById(id);
+    if (!request) {
+        return context.json({ error: "Not found" }, 404);
+    }
+
+    if (request.shareId) {
+        return context.json({ shareId: request.shareId });
+    }
+
+    const body = await context.req.json().catch(() => null);
+    if (!body?.password || typeof body.password !== "string") {
+        return context.json({ error: "Invalid password" }, 400);
+    }
+
+    const files = await FileModel.find({ requestId: id, status: "uploaded" })
+        .sort({ createdAt: -1 })
+        .lean();
+
+    const passwordHash = await bcrypt.hash(body.password, 10);
+    const share = await ShareModel.create({
+        passwordHash,
+        fileIds: files.map((file) => file._id),
+    });
+
+    request.shareId = share.id;
+    await request.save();
+
+    return context.json({ shareId: share.id });
 });
 
 export default router;

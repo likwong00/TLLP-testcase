@@ -1,23 +1,5 @@
 "use client";
 
-// type FilesListProps = {
-//     files: Array<{ id: string; name: string }>;
-// };
-
-// export default function FilesList({ files }: FilesListProps) {
-//     if (files.length === 0) {
-//         return <p style={{ color: "#666" }}>No files yet.</p>;
-//     }
-
-//     return (
-//         <ul style={{ paddingLeft: 16 }}>
-//             {files.map((file) => (
-//                 <li key={file.id}>{file.name}</li>
-//             ))}
-//         </ul>
-//     );
-// }
-
 import { motion } from "motion/react";
 import {
     File,
@@ -29,14 +11,7 @@ import {
     Archive,
 } from "lucide-react";
 import { Button } from "@/components/base/Button";
-
-interface FileItem {
-    id: string;
-    name: string;
-    size: number;
-    uploadedAt: Date;
-    type: string;
-}
+import type { FileItem } from "@/components/types/file";
 
 interface FilesListProps {
     files: FileItem[];
