@@ -8,9 +8,11 @@ import Link from "next/link";
 import { Button } from "@/components/base/Button";
 import FilePicker from "@/components/features/FilePicker";
 import FilesList from "@/components/features/FilesList";
+import NotFoundCard from "@/components/features/NotFoundCard";
 import UploadQueue from "@/components/features/UploadQueue";
 import PasswordGate from "@/components/features/PasswordGate";
 import {
+    checkRequestExists,
     getAuthToken,
     getRequest,
     setAuthToken,
@@ -32,6 +34,10 @@ export default function RequestsDetailClient({
     const searchParams = useSearchParams();
     const [token, setToken] = useState<string | null>(null);
     const [authError, setAuthError] = useState<string | null>(null);
+    const [existsStatus, setExistsStatus] = useState<
+        "loading" | "exists" | "missing"
+    >("loading");
+    const [existsError, setExistsError] = useState<string | null>(null);
     const [showShareDialog, setShowShareDialog] = useState(false);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const requestPassword = getRequestPassword(requestId);
@@ -52,6 +58,28 @@ export default function RequestsDetailClient({
         requestPassword,
         showShareDialog,
     });
+
+    useEffect(() => {
+        const verifyExists = async () => {
+            try {
+                const result = await checkRequestExists(requestId);
+                if (!result.exists) {
+                    setExistsStatus("missing");
+                    return;
+                }
+                setExistsStatus("exists");
+            } catch (error) {
+                setExistsError(
+                    error instanceof Error
+                        ? error.message
+                        : "Request not found",
+                );
+                setExistsStatus("missing");
+            }
+        };
+
+        void verifyExists();
+    }, [requestId]);
 
     useEffect(() => {
         if (searchParams.get("share") === "1") {
@@ -124,6 +152,31 @@ export default function RequestsDetailClient({
             );
         }
     };
+
+    if (existsStatus === "missing") {
+        return (
+            <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", duration: 0.5 }}
+                className="w-full max-w-md"
+            >
+                <NotFoundCard
+                    title="Request not found"
+                    description={
+                        existsError ??
+                        "This request ID doesn’t exist or has been removed."
+                    }
+                    backLabel="Back to landing page"
+                    backHref="/"
+                />
+            </motion.div>
+        );
+    }
+
+    if (existsStatus === "loading") {
+        return null;
+    }
 
     if (!token) {
         return (

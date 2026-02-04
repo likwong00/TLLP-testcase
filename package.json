@@ -7,9 +7,11 @@
         "dev": "turbo run dev",
         "build": "turbo run build",
         "lint": "turbo run lint",
-        "type-check": "turbo run type-check"
+        "type-check": "turbo run type-check",
+        "clean:blobs": "tsx scripts/clean-blobs.ts"
     },
     "devDependencies": {
+        "tsx": "^4.7.0",
         "turbo": "^1.10.16",
         "typescript": "^5.7.2"
     },

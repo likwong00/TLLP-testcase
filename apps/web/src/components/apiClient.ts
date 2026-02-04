@@ -4,6 +4,7 @@ const REQUEST_TOKENS_KEY = "tllp.requestTokens";
 const SHARE_TOKENS_KEY = "tllp.shareTokens";
 const REQUEST_PASSWORDS_KEY = "tllp.requestPasswords";
 const DEFAULT_TOKEN_TTL_MS = 1000 * 60 * 60;
+const EXISTS_CACHE_TTL_MS = 1000 * 15;
 
 const canUseLocalStorage =
     typeof window !== "undefined" && typeof window.localStorage !== "undefined";
@@ -107,6 +108,35 @@ let requestPasswordStore = parsePasswordStore(
     readSessionStorage(REQUEST_PASSWORDS_KEY),
 );
 
+type ExistsCacheEntry = {
+    exists: boolean;
+    expiresAt: number;
+};
+
+const requestExistsCache = new Map<string, ExistsCacheEntry>();
+const shareExistsCache = new Map<string, ExistsCacheEntry>();
+
+const readExistsCache = (
+    cache: Map<string, ExistsCacheEntry>,
+    id: string,
+) => {
+    const entry = cache.get(id);
+    if (!entry) return null;
+    if (entry.expiresAt <= Date.now()) {
+        cache.delete(id);
+        return null;
+    }
+    return entry.exists;
+};
+
+const writeExistsCache = (
+    cache: Map<string, ExistsCacheEntry>,
+    id: string,
+    exists: boolean,
+) => {
+    cache.set(id, { exists, expiresAt: Date.now() + EXISTS_CACHE_TTL_MS });
+};
+
 if (pruneExpiredTokens(requestTokenStore)) {
     writeLocalStorage(REQUEST_TOKENS_KEY, JSON.stringify(requestTokenStore));
 }
@@ -148,13 +178,19 @@ export const getAuthToken = (requestId: string) => {
     if (!entry) return null;
     if (entry.expiresAt <= Date.now()) {
         delete requestTokenStore[requestId];
-        writeLocalStorage(REQUEST_TOKENS_KEY, JSON.stringify(requestTokenStore));
+        writeLocalStorage(
+            REQUEST_TOKENS_KEY,
+            JSON.stringify(requestTokenStore),
+        );
         return null;
     }
     return entry.token;
 };
 
-export const setRequestPassword = (requestId: string, password: string | null) => {
+export const setRequestPassword = (
+    requestId: string,
+    password: string | null,
+) => {
     if (!requestId) return;
     if (password === null) {
         delete requestPasswordStore[requestId];
@@ -244,6 +280,26 @@ export const requestAuth = async (requestId: string, password: string) => {
     return (await response.json()) as { token: string };
 };
 
+export const checkRequestExists = async (requestId: string) => {
+    const cached = readExistsCache(requestExistsCache, requestId);
+    if (cached !== null) {
+        return { exists: cached };
+    }
+
+    const response = await fetch(`${API_URL}/requests/${requestId}/exists`, {
+        method: "GET",
+    });
+
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data?.error ?? "Failed to validate request");
+    }
+
+    const data = (await response.json()) as { exists: boolean };
+    writeExistsCache(requestExistsCache, requestId, data.exists);
+    return data;
+};
+
 export const createRequest = async (password: string) => {
     const response = await fetch(`${API_URL}/requests`, {
         method: "POST",
@@ -276,7 +332,20 @@ export const getRequest = async (requestId: string) => {
     return (await response.json()) as { id: string };
 };
 
-export const initiateRequestFile = async (requestId: string, file: File) => {
+export type InitiateRequestResponse =
+    | { type: "single"; fileId: string; uploadUrl: string }
+    | {
+          type: "multipart";
+          fileId: string;
+          uploadId: string;
+          partSize: number;
+      };
+
+export const initiateRequestFile = async (
+    requestId: string,
+    file: File,
+    options?: { multipart?: boolean },
+): Promise<InitiateRequestResponse> => {
     const response = await apiFetch(
         `/requests/${requestId}/files/initiate`,
         {
@@ -288,6 +357,7 @@ export const initiateRequestFile = async (requestId: string, file: File) => {
                 originalName: file.name,
                 mimeType: file.type || "application/octet-stream",
                 size: file.size,
+                multipart: options?.multipart ?? false,
             }),
         },
         getAuthToken(requestId),
@@ -298,21 +368,111 @@ export const initiateRequestFile = async (requestId: string, file: File) => {
         throw new Error(data?.error ?? "Failed to initiate upload");
     }
 
-    return (await response.json()) as { fileId: string; uploadUrl: string };
+    const data = (await response.json()) as
+        | { fileId: string; uploadUrl: string }
+        | {
+              type: "multipart";
+              fileId: string;
+              uploadId: string;
+              partSize: number;
+          };
+
+    if ("uploadUrl" in data) {
+        return { type: "single", fileId: data.fileId, uploadUrl: data.uploadUrl };
+    }
+
+    return data;
 };
 
-export const uploadToSignedUrl = async (uploadUrl: string, file: File) => {
-    const response = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: {
-            "Content-Type": file.type || "application/octet-stream",
-        },
-        body: file,
+export const uploadToSignedUrl = async (
+    uploadUrl: string,
+    blob: Blob,
+    onProgress?: (progress: number) => void,
+    contentType?: string,
+) => {
+    return await new Promise<{ etag?: string }>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", uploadUrl);
+        xhr.setRequestHeader(
+            "Content-Type",
+            contentType || blob.type || "application/octet-stream",
+        );
+
+        if (onProgress) {
+            xhr.upload.onprogress = (event) => {
+                if (!event.lengthComputable) return;
+                const progress = Math.round((event.loaded / event.total) * 100);
+                onProgress(progress);
+            };
+        }
+
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                const etag = xhr.getResponseHeader("ETag") ?? undefined;
+                resolve({ etag: etag ? etag.replace(/\"/g, "") : undefined });
+                return;
+            }
+            reject(new Error("Upload failed"));
+        };
+
+        xhr.onerror = () => reject(new Error("Upload failed"));
+        xhr.onabort = () => reject(new Error("Upload cancelled"));
+
+        xhr.send(blob);
     });
+};
+
+export const createMultipartPart = async (
+    requestId: string,
+    fileId: string,
+    uploadId: string,
+    partNumber: number,
+    size: number,
+) => {
+    const response = await apiFetch(
+        `/requests/${requestId}/files/${fileId}/multipart/parts`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ uploadId, partNumber, size }),
+        },
+        getAuthToken(requestId),
+    );
 
     if (!response.ok) {
-        throw new Error("Upload failed");
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data?.error ?? "Failed to prepare multipart part");
     }
+
+    return (await response.json()) as { partNumber: number; uploadUrl: string };
+};
+
+export const completeMultipartUpload = async (
+    requestId: string,
+    fileId: string,
+    uploadId: string,
+    parts: Array<{ partNumber: number; etag?: string }>,
+) => {
+    const response = await apiFetch(
+        `/requests/${requestId}/files/${fileId}/multipart/complete`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ uploadId, parts }),
+        },
+        getAuthToken(requestId),
+    );
+
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data?.error ?? "Failed to complete multipart upload");
+    }
+
+    return (await response.json()) as { ok: true; uploadId: string };
 };
 
 export const completeRequestFile = async (
@@ -391,6 +551,26 @@ export const authShare = async (shareId: string, password: string) => {
     }
 
     return (await response.json()) as { token: string };
+};
+
+export const checkShareExists = async (shareId: string) => {
+    const cached = readExistsCache(shareExistsCache, shareId);
+    if (cached !== null) {
+        return { exists: cached };
+    }
+
+    const response = await fetch(`${API_URL}/shares/${shareId}/exists`, {
+        method: "GET",
+    });
+
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data?.error ?? "Failed to validate share");
+    }
+
+    const data = (await response.json()) as { exists: boolean };
+    writeExistsCache(shareExistsCache, shareId, data.exists);
+    return data;
 };
 
 export type ShareFile = {

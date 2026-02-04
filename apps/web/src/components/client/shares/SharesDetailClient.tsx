@@ -6,10 +6,12 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/base/Button";
 import PasswordGate from "@/components/features/PasswordGate";
 import FilesList from "@/components/features/FilesList";
+import NotFoundCard from "@/components/features/NotFoundCard";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import {
     authShare,
+    checkShareExists,
     getShareAuthToken,
     getShareDownloadUrl,
     listShareFiles,
@@ -27,6 +29,30 @@ export default function SharesDetailClient({ shareId }: SharesClientProps) {
     const [files, setFiles] = useState<FileItem[]>([]);
     const [isLoadingFiles, setIsLoadingFiles] = useState(false);
     const [authError, setAuthError] = useState<string | null>(null);
+    const [existsStatus, setExistsStatus] = useState<
+        "loading" | "exists" | "missing"
+    >("loading");
+    const [existsError, setExistsError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const verifyExists = async () => {
+            try {
+                const result = await checkShareExists(shareId);
+                if (!result.exists) {
+                    setExistsStatus("missing");
+                    return;
+                }
+                setExistsStatus("exists");
+            } catch (error) {
+                setExistsError(
+                    error instanceof Error ? error.message : "Share not found",
+                );
+                setExistsStatus("missing");
+            }
+        };
+
+        void verifyExists();
+    }, [shareId]);
 
     useEffect(() => {
         const existingToken = getShareAuthToken(shareId);
@@ -88,6 +114,32 @@ export default function SharesDetailClient({ shareId }: SharesClientProps) {
             );
         }
     };
+
+    if (existsStatus === "missing") {
+        return (
+            <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                transition={{ type: "spring", duration: 0.5 }}
+                className="w-full max-w-md"
+            >
+                <NotFoundCard
+                    title="Share not found"
+                    description={
+                        existsError ??
+                        "This share ID doesn’t exist or has been removed."
+                    }
+                    backLabel="Back to home page"
+                    onBack={() => router.push("/")}
+                />
+            </motion.div>
+        );
+    }
+
+    if (existsStatus === "loading") {
+        return null;
+    }
 
     if (!authenticated) {
         return (

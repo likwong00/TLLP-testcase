@@ -1,4 +1,3 @@
-// File schemas
 import { z } from "zod";
 import { FileIdSchema, FileRequestIdSchema, ShareIdSchema } from "./ids";
 

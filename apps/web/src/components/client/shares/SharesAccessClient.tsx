@@ -9,7 +9,11 @@ import { Button } from "@/components/base/Button";
 import { Input } from "@/components/base/Input";
 import { Label } from "@/components/base/Label";
 import PasswordGate from "@/components/features/PasswordGate";
-import { authShare, setShareAuthToken } from "@/components/apiClient";
+import {
+    authShare,
+    checkShareExists,
+    setShareAuthToken,
+} from "@/components/apiClient";
 
 type Stage = "enter" | "password";
 
@@ -20,14 +24,28 @@ export default function SharesAccessClient() {
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleContinue = () => {
+    const handleContinue = async () => {
         const trimmed = shareId.trim();
         if (!trimmed) {
             setError("Share ID is required");
             return;
         }
+        setIsSubmitting(true);
         setError(null);
-        setStage("password");
+        try {
+            const result = await checkShareExists(trimmed);
+            if (!result.exists) {
+                setError("Share not found");
+                return;
+            }
+            setStage("password");
+        } catch (err) {
+            setError(
+                err instanceof Error ? err.message : "Unable to validate share",
+            );
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handlePasswordSuccess = async (password: string) => {

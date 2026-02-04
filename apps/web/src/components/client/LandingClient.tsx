@@ -19,7 +19,7 @@ export default function LandingClient() {
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.2 }}
                 >
-                    <h1 className="mb-2">File Share</h1>
+                    <h1 className="mb-2">File Service</h1>
                     <p className="text-gray-600">
                         Secure file uploads and downloads with password
                         protection

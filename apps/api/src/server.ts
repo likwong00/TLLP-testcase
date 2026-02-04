@@ -7,6 +7,7 @@ import { FileRequestModel } from "./db/models/FileRequest";
 import { FileModel } from "./db/models/File";
 import { AuthSessionModel } from "./db/models/AuthSession";
 import { ShareModel } from "./db/models/Share";
+import { MultipartUploadModel } from "./db/models/MultipartUpload";
 import requestsRouter from "./routes/requests";
 import mockS3Router from "./routes/mockS3";
 import sharesRouter from "./routes/shares";
@@ -49,14 +50,22 @@ export const createServer = () => {
             return context.json({ error: "Dev dump disabled" }, 404);
         }
 
-        const [requests, files, sessions, shares] = await Promise.all([
-            FileRequestModel.find().lean(),
-            FileModel.find().lean(),
-            AuthSessionModel.find().lean(),
-            ShareModel.find().lean(),
-        ]);
+        const [requests, files, sessions, shares, multipartUploads] =
+            await Promise.all([
+                FileRequestModel.find().lean(),
+                FileModel.find().lean(),
+                AuthSessionModel.find().lean(),
+                ShareModel.find().lean(),
+                MultipartUploadModel.find().lean(),
+            ]);
 
-        return context.json({ requests, files, sessions, shares });
+        return context.json({
+            requests,
+            files,
+            sessions,
+            shares,
+            multipartUploads,
+        });
     });
 
     return app;

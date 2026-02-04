@@ -10,6 +10,7 @@ import { Input } from "@/components/base/Input";
 import { Label } from "@/components/base/Label";
 import PasswordGate from "@/components/features/PasswordGate";
 import {
+    checkRequestExists,
     createRequest,
     requestAuth,
     setAuthToken,
@@ -28,19 +29,49 @@ export default function RequestsAccessClient() {
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleJoinContinue = () => {
+    const handleJoinContinue = async () => {
         const trimmed = requestId.trim();
         if (!trimmed) {
             setError("Request ID is required");
             return;
         }
+        setIsSubmitting(true);
         setError(null);
-        setPasswordMode("enter");
+        try {
+            const result = await checkRequestExists(trimmed);
+            if (!result.exists) {
+                setError("Request not found");
+                return;
+            }
+            setPasswordMode("enter");
+        } catch (err) {
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : "Unable to validate request",
+            );
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleCreate = () => {
         setError(null);
         setPasswordMode("create");
+    };
+
+    const handleOpenJoin = () => {
+        if (!isSubmitting) {
+            setError(null);
+            setStage("join");
+        }
+    };
+
+    const handleCloseJoin = () => {
+        if (!isSubmitting) {
+            setError(null);
+            setStage("choice");
+        }
     };
 
     const handlePasswordSuccess = async (password: string) => {
@@ -98,41 +129,35 @@ export default function RequestsAccessClient() {
 
     return (
         <>
-            <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: "spring", duration: 0.6 }}
-                className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md"
-            >
-                <div className="flex items-center gap-3 mb-6">
-                    <Button
-                        asChild
-                        variant="ghost"
-                        size="sm"
-                        className="rounded-full"
+            <AnimatePresence mode="wait">
+                {stage === "choice" ? (
+                    <motion.div
+                        key="choice"
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: "spring", duration: 0.6 }}
+                        className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md"
                     >
-                        <Link href="/">
-                            <ArrowLeft className="w-4 h-4" />
-                        </Link>
-                    </Button>
-                    <div>
-                        <h2>Requests</h2>
-                        <p className="text-sm text-gray-600">
-                            Create a request or join an existing one.
-                        </p>
-                    </div>
-                </div>
+                        <div className="flex items-center gap-3 mb-6">
+                            <Button
+                                asChild
+                                variant="ghost"
+                                size="sm"
+                                className="rounded-full"
+                            >
+                                <Link href="/">
+                                    <ArrowLeft className="w-4 h-4" />
+                                </Link>
+                            </Button>
+                            <div>
+                                <h2>Requests</h2>
+                                <p className="text-sm text-gray-600">
+                                    Create a request or join an existing one.
+                                </p>
+                            </div>
+                        </div>
 
-                <AnimatePresence mode="wait">
-                    {stage === "choice" ? (
-                        <motion.div
-                            key="choice"
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -8 }}
-                            transition={{ duration: 0.2 }}
-                            className="space-y-3"
-                        >
+                        <div className="space-y-3">
                             <Button className="w-full" onClick={handleCreate}>
                                 <span className="flex items-center gap-2">
                                     <Plus className="w-4 h-4" />
@@ -142,23 +167,44 @@ export default function RequestsAccessClient() {
                             <Button
                                 className="w-full"
                                 variant="outline"
-                                onClick={() => setStage("join")}
+                                onClick={handleOpenJoin}
                             >
                                 <span className="flex items-center gap-2">
                                     <LogIn className="w-4 h-4" />
                                     Join an existing request
                                 </span>
                             </Button>
-                        </motion.div>
-                    ) : (
+                        </div>
+                    </motion.div>
+                ) : (
+                    <AnimatePresence mode="wait">
                         <motion.div
                             key="join"
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
                             exit={{ opacity: 0, y: -8 }}
-                            transition={{ duration: 0.2 }}
-                            className="space-y-4"
+                            transition={{ type: "spring", duration: 0.6 }}
+                            className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md"
                         >
+                            <div className="flex items-center gap-3 mb-6">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="rounded-full"
+                                    onClick={handleCloseJoin}
+                                >
+                                    <ArrowLeft className="w-4 h-4" />
+                                </Button>
+                                <div>
+                                    <h2>Join Existing Request</h2>
+                                    <p className="text-sm text-gray-600">
+                                        Join an existing request through Request
+                                        ID, the owner of the request should be
+                                        able to share it.
+                                    </p>
+                                </div>
+                            </div>
+
                             <div className="space-y-2">
                                 <Label htmlFor="requestId">Request ID</Label>
                                 <Input
@@ -172,40 +218,27 @@ export default function RequestsAccessClient() {
                             </div>
 
                             {error ? (
-                                <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+                                <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg mt-4">
                                     {error}
                                 </p>
                             ) : null}
 
-                            <div className="space-y-2">
+                            <div className="flex gap-3 pt-4">
                                 <Button
-                                    className="w-full"
+                                    className="flex-1"
                                     onClick={handleJoinContinue}
                                     disabled={isSubmitting}
                                 >
-                                    Continue to password
-                                </Button>
-                                <Button
-                                    className="w-full"
-                                    variant="ghost"
-                                    onClick={() => {
-                                        setStage("choice");
-                                        setError(null);
-                                    }}
-                                >
-                                    Back
+                                    <span className="flex items-center gap-2">
+                                        <LogIn className="w-4 h-4" />
+                                        Continue to password
+                                    </span>
                                 </Button>
                             </div>
                         </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {error && stage === "choice" ? (
-                    <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg mt-4">
-                        {error}
-                    </p>
-                ) : null}
-            </motion.div>
+                    </AnimatePresence>
+                )}
+            </AnimatePresence>
 
             {passwordMode ? (
                 <PasswordGate
