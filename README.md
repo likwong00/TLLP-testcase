@@ -23,7 +23,15 @@ https://github.com/user-attachments/assets/27455d02-efad-4057-9671-0f537d4cbfd6
 ### Prerequisites
 
 - Node.js 18+
-- pnpm (or npm/yarn)
+- pnpm (required)
+
+Installing `pnpm`:
+
+```bash
+npm install -g pnpm@latest-10
+```
+
+For more information visit: [pnpm installation guide](https://pnpm.io/installation)
 
 ### Installation
 
