@@ -4,7 +4,7 @@ A full-stack file upload and download service built with Turborepo, Hono, Next.j
 
 Quick Demo:
 
-<video controls src="demo-recording.mp4" title="Title"></video>
+https://github.com/user-attachments/assets/27455d02-efad-4057-9671-0f537d4cbfd6
 
 ## Project Structure
 
@@ -44,6 +44,7 @@ pnpm dev
 ```
 
 This will start both the frontend and backend in development mode.
+If running into build errors to do with missing dependencies, try running `pnpm install` in `apps/api` and `apps/web`.
 
 Default ports:
 
