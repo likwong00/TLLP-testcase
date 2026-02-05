@@ -23,6 +23,25 @@ export default function PasswordGate({
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState("");
 
+    const getPasswordError = (value: string) => {
+        if (value.length < 8) {
+            return "Password must be at least 8 characters";
+        }
+        if (!/[a-z]/.test(value)) {
+            return "Password must include a lowercase letter";
+        }
+        if (!/[A-Z]/.test(value)) {
+            return "Password must include an uppercase letter";
+        }
+        if (!/[0-9]/.test(value)) {
+            return "Password must include a number";
+        }
+        if (!/[^A-Za-z0-9]/.test(value)) {
+            return "Password must include a symbol";
+        }
+        return "";
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
@@ -32,14 +51,17 @@ export default function PasswordGate({
             return;
         }
 
-        if (mode === "create" && password !== confirmPassword) {
-            setError("Passwords do not match");
-            return;
-        }
+        if (mode === "create") {
+            const passwordError = getPasswordError(password);
+            if (passwordError) {
+                setError(passwordError);
+                return;
+            }
 
-        if (password.length < 4) {
-            setError("Password must be at least 4 characters");
-            return;
+            if (password !== confirmPassword) {
+                setError("Passwords do not match");
+                return;
+            }
         }
 
         onSuccess(password);
@@ -100,6 +122,12 @@ export default function PasswordGate({
                                 )}
                             </button>
                         </div>
+                        {mode === "create" ? (
+                            <p className="text-xs text-gray-500">
+                                Use at least 8 characters with upper/lowercase
+                                letters, a number, and a symbol.
+                            </p>
+                        ) : null}
                     </div>
 
                     {mode === "create" && (

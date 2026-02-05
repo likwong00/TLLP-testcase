@@ -37,7 +37,7 @@ type UseUploadQueueResult = {
 
 const MAX_UPLOAD_RETRIES = 2;
 const RETRY_BASE_DELAY_MS = 800;
-const MAX_PARALLEL_UPLOADS = 5;
+const MAX_PARALLEL_UPLOADS = 3;
 const MULTIPART_THRESHOLD_BYTES = 20 * 1024 * 1024;
 const MULTIPART_CONCURRENCY = 5;
 
@@ -65,7 +65,10 @@ export default function useUploadQueue({
             return "Too many uploads right now. Please try again in a moment.";
         }
 
-        if (normalized.includes("too large") || normalized.includes("file size")) {
+        if (
+            normalized.includes("too large") ||
+            normalized.includes("file size")
+        ) {
             return "This file is too large to upload.";
         }
 
@@ -73,7 +76,10 @@ export default function useUploadQueue({
             return "This request has reached the maximum number of files.";
         }
 
-        if (normalized.includes("authentication") || normalized.includes("unauthorized")) {
+        if (
+            normalized.includes("authentication") ||
+            normalized.includes("unauthorized")
+        ) {
             return "Your session expired. Please sign in again.";
         }
 

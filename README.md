@@ -1,14 +1,18 @@
-# File Upload/Download Service
+# File Service
 
-A full-stack file upload and download service built with Turborepo, Hono, Next.js, and MongoDB.
+A full-stack file upload and download service built with Turborepo, Hono, Next.js/React, and MongoDB.
+
+Quick Demo:
+
+<video controls src="demo-recording.mp4" title="Title"></video>
 
 ## Project Structure
 
 ```
-file-service/
+.
 ├── apps/
 │   ├── api/          # Hono backend API
-│   └── web/          # Next.js frontend
+│   └── web/          # Next.js/React frontend
 ├── packages/
 │   └── shared/       # Shared types and schemas
 └── scripts/          # Utility scripts
@@ -27,6 +31,12 @@ file-service/
 pnpm install
 ```
 
+### Build
+
+```bash
+pnpm build
+```
+
 ### Development
 
 ```bash
@@ -35,11 +45,10 @@ pnpm dev
 
 This will start both the frontend and backend in development mode.
 
-### Build
+Default ports:
 
-```bash
-pnpm build
-```
+- Web: http://localhost:3000
+- API: http://localhost:8787
 
 ## Features
 
@@ -48,15 +57,32 @@ pnpm build
 - **S3 Integration**: Mock S3 client for signed URL uploads
 - **Multipart Uploads**: Support for both single-part and multipart file uploads
 - **Type Safety**: Full TypeScript support with Zod validation
+- **Local Blob Storage**: Stored under apps/api/data/blobs for dev
 
 ## Tech Stack
 
 - **Backend**: Hono (HTTP framework)
 - **Frontend**: Next.js with React
-- **Database**: MongoDB (in-memory instance)
+- **Database**: MongoDB (in-memory instance for development)
 - **Build System**: Turborepo
 - **Validation**: Zod
 - **Package Manager**: pnpm
+
+## Environment Variables
+
+API (apps/api):
+
+- `PORT` (default: 8787)
+- `CORS_ORIGIN` (default: http://localhost:3000)
+- `DEV_SEED_ENABLED` (default: true)
+
+Web (apps/web):
+
+- `NEXT_PUBLIC_API_URL` (default: http://localhost:8787)
+
+## Utilities
+
+- `pnpm clean:blobs` clears the local blob store under apps/api/data/blobs.
 
 ## Documentation
 
@@ -64,3 +90,4 @@ See individual README files in each workspace for more details:
 
 - [API Documentation](apps/api/README.md)
 - [Web Documentation](apps/web/README.md)
+- [Database Schema](packages/shared/DATABASE_SCHEMA.md)
